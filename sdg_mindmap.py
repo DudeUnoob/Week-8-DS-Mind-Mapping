@@ -162,11 +162,13 @@ PRIMARY_NODES = [
 
 # Angles for the 5 primary nodes (degrees), top-first, clockwise
 PRIMARY_ANGLES_DEG = [90, 18, -54, -126, -198]
-PRIMARY_R   = 4.2
-SECONDARY_R = 8.2
+PRIMARY_R   = 4.15
+# Outer ring: pulled back slightly from the plot edge; side secondaries use +SEC_RADIAL_STAGGER
+SECONDARY_R = 9.55
+SEC_RADIAL_STAGGER = 1.05
 
 # Per-primary, spread of secondary angles (relative offsets in degrees)
-SEC_OFFSETS = [28, 0, -28]
+SEC_OFFSETS = [42, 0, -42]
 
 
 # ─── Drawing helpers ──────────────────────────────────────────────────────────
@@ -218,8 +220,8 @@ def glow(ax, x, y, r, color, alpha):
 fig, ax = plt.subplots(figsize=(26, 26))
 fig.patch.set_facecolor(BG)
 ax.set_facecolor(BG)
-ax.set_xlim(-11.5, 11.5)
-ax.set_ylim(-11.5, 11.5)
+ax.set_xlim(-12.0, 12.0)
+ax.set_ylim(-12.0, 12.0)
 ax.set_aspect("equal")
 ax.axis("off")
 
@@ -278,40 +280,43 @@ for pnode, pa_deg in zip(PRIMARY_NODES, PRIMARY_ANGLES_DEG):
     # Glow behind primary
     glow(ax, px, py, 1.6, col, 0.15)
 
-    # Branch centre → primary
+    # Branch centre → primary (under primary card)
     branch(ax, 0, 0, px, py, col, lw=3.2, rad=0.10)
     dot(ax, px, py, col, r=0.22, zorder=7)
 
-    # Primary node box
-    fancy_box(ax, px, py, 2.75, 1.7, col, ec="#FFFFFF", lw=1.5, zorder=5)
+    # Primary node box and labels sit above secondary connectors/cards when they overlap
+    fancy_box(ax, px, py, 2.75, 1.7, col, ec="#FFFFFF", lw=1.5, zorder=8)
     # Icon symbol (top centre of box)
-    text(ax, px, py + 0.50, icon, fs=15, color="#FFFFFF", bold=True, zorder=6)
+    text(ax, px, py + 0.50, icon, fs=15, color="#FFFFFF", bold=True, zorder=9)
     # Node label
     text(ax, px, py + 0.05, pnode["label"], fs=12.5, color="#FFFFFF", bold=True,
-         zorder=6, ls=1.2)
+         zorder=9, ls=1.2)
     # Stat line
     text(ax, px, py - 0.60, pnode["stat"], fs=8.5, color="#FFFFCC",
-         italic=True, zorder=6, ls=1.2)
+         italic=True, zorder=9, ls=1.2)
 
     # ── Secondary nodes ────────────────────────────────────────────────────────
     for j, (snode, off_deg) in enumerate(zip(pnode["secondary"], SEC_OFFSETS)):
-        sa  = math.radians(pa_deg + off_deg)
-        sx  = SECONDARY_R * math.cos(sa)
-        sy  = SECONDARY_R * math.sin(sa)
+        sa = math.radians(pa_deg + off_deg)
+        # Middle card on the base radius; side cards slightly farther out to clear primaries
+        sr = SECONDARY_R + (0.0 if j == 1 else SEC_RADIAL_STAGGER)
+        sx = sr * math.cos(sa)
+        sy = sr * math.sin(sa)
 
         # Branch primary → secondary
-        branch(ax, px, py, sx, sy, col, lw=1.8, rad=0.15)
-        dot(ax, sx, sy, col, r=0.11, zorder=7)
+        branch(ax, px, py, sx, sy, col, lw=1.8, rad=0.15, zorder=3)
+        dot(ax, sx, sy, col, r=0.11, zorder=5)
 
-        # Secondary box
-        fancy_box(ax, sx, sy, 2.7, 1.55, "#112233", ec=col, lw=1.4,
-                  alpha=0.95, zorder=5, radius=0.25)
+        # Secondary box (below primary z-order so branch titles stay readable)
+        sec_w, sec_h = 2.38, 1.42
+        fancy_box(ax, sx, sy, sec_w, sec_h, "#112233", ec=col, lw=1.4,
+                  alpha=0.95, zorder=4, radius=0.25)
         # Title
-        text(ax, sx, sy + 0.32, snode["label"],
-             fs=9.5, color=col, bold=True, zorder=6, ls=1.2)
+        text(ax, sx, sy + 0.28, snode["label"],
+             fs=9.2, color=col, bold=True, zorder=5, ls=1.15)
         # Detail
-        text(ax, sx, sy - 0.40, snode["detail"],
-             fs=7.8, color="#CCCCCC", italic=True, zorder=6, ls=1.3)
+        text(ax, sx, sy - 0.36, snode["detail"],
+             fs=7.5, color="#CCCCCC", italic=True, zorder=5, ls=1.25)
 
 # ─── Six SDG Transitions strip (bottom area) ──────────────────────────────────
 transitions = [
@@ -347,18 +352,6 @@ for li, (lc, lt) in enumerate(legend_data):
     ly = ly0 - li * 0.60
     dot(ax, lx + 0.25, ly, lc, r=0.20, zorder=10)
     text(ax, lx + 0.65, ly, lt, fs=9, color="#CCCCCC", ha="left", zorder=10)
-
-# ─── Key stat callouts (scattered small badges) ───────────────────────────────
-callouts = [
-    (-9.5, 2.5, "#E63946", "800 M+\nExtreme Poor"),
-    (9.2,  2.5, "#2A9D8F", "40% \u2193 HIV\nsince 2010"),
-    (-9.5, -2.5, "#457B9D", "120 M\nDisplaced"),
-    (9.2, -2.5,  "#F4A261", "68% Internet\nAccess 2024"),
-]
-for bx, by, bc, bl in callouts:
-    fancy_box(ax, bx, by, 2.3, 1.1, bc, ec="#FFFFFF", lw=0.9, alpha=0.75,
-              zorder=4, radius=0.2)
-    text(ax, bx, by, bl, fs=9, color="#FFFFFF", bold=True, zorder=5, ls=1.3)
 
 # ─── Footer ───────────────────────────────────────────────────────────────────
 ax.plot([-10.5, 10.5], [-11.1, -11.1], color=GOLD, lw=0.5, alpha=0.4, zorder=10)
